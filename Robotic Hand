@@ -1,0 +1,280 @@
+#include <Servo.h>
+
+#Ready to be importanted onto an arduino UNO R3
+
+Servo ServoIndex;
+Servo ServoMiddle;
+Servo ServoRing;
+Servo ServoPinky;
+Servo ServoThumbLarge;
+Servo ServoThumbSmall;
+
+const int CurrentThreshold = 100;
+
+int SensorPinIndex = A0;  // Sensor pin for servo 1
+int SensorPinMiddle = A1;  // Sensor pin for servo 2
+int SensorPinRing = A2;  // Sensor pin for servo 3
+int SensorPinPinky = A3;  // Sensor pin for servo 4
+int SensorPinThumb = A4;  // Sensor pin for servo 5 and 6
+
+int SensorValueIndex = 0;
+int SensorValueMiddle = 0;
+int SensorValueRing = 0;
+int SensorValuePinky = 0;
+int SensorValueThumb = 0;
+
+int CounterIndex = 0;
+int CounterMiddle = 0;
+int CounterRing = 0;
+int CounterPinky = 0;
+int CounterThumb = 0;
+
+bool ContactIndex = false;
+bool ContactMiddle = false;
+bool ContactRing = false;
+bool ContactPinky = false;
+bool ContactThumb = false;
+
+unsigned long StartTimeIndex = 0; // initialize start time to 0
+unsigned long StartTimeMiddle = 0; // initialize start time to 0
+unsigned long StartTimeRing = 0; // initialize start time to 0
+unsigned long StartTimePinky = 0; // initialize start time to 0
+unsigned long StartTimeThumb = 0; // initialize start time to 0
+
+unsigned long StopTimeIndex = 0; // initialize start time to 0
+unsigned long StopTimeMiddle = 0; // initialize start time to 0
+unsigned long StopTimeRing = 0; // initialize start time to 0
+unsigned long StopTimePinky = 0; // initialize start time to 0
+unsigned long StopTimeThumb = 0; // initialize start time to 0
+
+unsigned long ElapsedTimeIndex; // initialize start time to 0
+unsigned long ElapsedTimeMiddle; // initialize start time to 0
+unsigned long ElapsedTimeRing; // initialize start time to 0
+unsigned long ElapsedTimePinky; // initialize start time to 0
+unsigned long ElapsedTimeThumbSmall; // initialize start time to 0
+unsigned long ElapsedTimeThumbLarge; // initialize start time to 0
+
+unsigned long ClockwiseTimeIndex; // initialize start time to 0
+unsigned long ClockwiseTimeMiddle; // initialize start time to 0
+unsigned long ClockwiseTimeRing; // initialize start time to 0
+unsigned long ClockwiseTimePinky; // initialize start time to 0
+unsigned long ClockwiseTimeThumb; // initialize start time to 0
+
+unsigned long AntiClockwiseStartTimeIndex; // initialize start time to 0
+unsigned long AntiClockwiseStartTimeMiddle; // initialize start time to 0
+unsigned long AntiClockwiseStartTimeRing; // initialize start time to 0
+unsigned long AntiClockwiseStartTimePinky; // initialize start time to 0
+unsigned long AntiClockwiseStartTimeThumb; // initialize start time to 0
+
+
+// EMG commands
+
+bool IsTensed = false; //Storing whether person is tensed or not.
+
+const int ThresholdEMG = 80;   // Threshold value for detecting tension
+const int NumReadings = 5;  // Number of consecutive readings above the threshold
+const int DetectionInterval = 50;  // Time interval to detect consecutive readings (in milliseconds)
+
+
+void Full_Grip () {
+  // Motor Commands
+
+//Start Clockwise Movement of all fingers (Anti for thumb large)
+ServoIndex.write(180);
+ServoMiddle.write(180);
+ServoRing.write(180);
+ServoPinky.write(180);
+ServoThumbSmall.write(180);
+ServoThumbLarge.write(60); //This servo dictates all thumb behviour. It must connect to A4 pin.
+StartTimeIndex = millis();
+StartTimeMiddle = millis();
+StartTimeRing = millis();
+StartTimePinky = millis();
+StartTimeThumb = millis();
+
+delay(100); //Avoid intial current draw. //Note this might fuck up the timing TEST THIS?
+
+//Loop for controlling finger motors states.
+
+while ((ContactIndex == false) or (ContactMiddle == false) or (ContactRing == false) or (ContactPinky == false) or (ContactThumb == false)) {
+  SensorValueIndex = analogRead(SensorPinIndex);
+  SensorValueMiddle = analogRead(SensorPinMiddle);
+  SensorValueRing = analogRead(SensorPinRing);
+  SensorValuePinky = analogRead(SensorPinPinky);
+  SensorValueThumb = analogRead(SensorPinThumb);
+
+  if (SensorValueIndex > CurrentThreshold) {
+    if (CounterIndex == 0 ) {
+      ServoIndex.write(90);
+      ContactIndex = true;
+      CounterIndex += 1;
+      StopTimeIndex = millis();
+    }
+  }
+
+   if (SensorValueMiddle > CurrentThreshold) {
+    if (CounterMiddle == 0 ) {
+      ServoMiddle.write(90);
+      ContactMiddle = true;
+      CounterMiddle += 1;
+      StopTimeMiddle = millis();
+    }
+  }
+
+   if (SensorValueRing > CurrentThreshold) {
+    if (CounterRing == 0 ) {
+      ServoRing.write(90);
+      ContactRing = true;
+      CounterRing += 1;
+      StopTimeRing = millis();
+    }
+  }
+
+   if (SensorValuePinky > CurrentThreshold) {
+    if (CounterPinky == 0 ) {
+      ServoPinky.write(90);
+      ContactPinky = true;
+      CounterPinky += 1;
+      StopTimePinky = millis();
+    }
+  }
+
+   if (SensorValueThumb > CurrentThreshold) {
+    if (CounterThumb == 0 ) {
+      ServoThumbSmall.write(90);
+      ServoThumbLarge.write(90); //Note this is controlling two motors. Not enough analog pins, this is my solution.
+      ContactThumb = true;
+      CounterThumb += 1;
+      StopTimeThumb = millis();
+    }
+  }
+delay(100); //Do I need this?
+}
+
+//Calculate time for each finger
+
+ClockwiseTimeIndex = StopTimeIndex - StartTimeIndex;
+ClockwiseTimeMiddle = StopTimeMiddle  - StartTimeMiddle;
+ClockwiseTimeRing = StopTimeRing  - StartTimeRing;
+ClockwiseTimePinky = StopTimePinky  - StartTimePinky;
+ClockwiseTimeThumb = StopTimeThumb  - StartTimeThumb;
+//Pause the fingers for three seconds. In their grip position.
+delay(3000);
+
+//Start rotating the motors anti clockwise (Clockwise for large thumb)
+ServoIndex.write(0);
+ServoMiddle.write(0);
+ServoRing.write(0);
+ServoPinky.write(0);
+ServoThumbSmall.write(0);
+ServoThumbLarge.write(120);
+
+AntiClockwiseStartTimeIndex = millis();
+AntiClockwiseStartTimeMiddle = millis();
+AntiClockwiseStartTimeRing = millis();
+AntiClockwiseStartTimePinky = millis();
+AntiClockwiseStartTimeThumb = millis();
+//StartTimeRing = millis();
+//StartTimePinky = millis();
+
+CounterIndex = 0; //We reset our counters, so that we dont skip our logic when we tense again.
+CounterMiddle = 0;
+CounterRing = 0;
+CounterPinky = 0;
+CounterThumb = 0;
+
+while ((ContactIndex == true) or (ContactMiddle == true) or (ContactRing == true) or (ContactPinky == true) or (ContactThumb == true)) {
+  unsigned long ElapsedTimeIndex = millis() - AntiClockwiseStartTimeIndex;
+  unsigned long ElapsedTimeMiddle = millis() - AntiClockwiseStartTimeMiddle;
+  unsigned long ElapsedTimeRing = millis() - AntiClockwiseStartTimeRing;
+  unsigned long ElapsedTimePinky = millis() - AntiClockwiseStartTimePinky;
+  unsigned long ElapsedTimeThumb = millis() - AntiClockwiseStartTimeThumb;
+  if (ElapsedTimeIndex >= ClockwiseTimeIndex) {
+    if (CounterIndex == 0) {
+      ServoIndex.write(90);
+      CounterIndex += 1;
+      ContactIndex = false;
+    }
+  }
+  if (ElapsedTimeMiddle >= ClockwiseTimeMiddle) {
+    if (CounterMiddle == 0) {
+      ServoMiddle.write(90);
+      CounterMiddle += 1;
+      ContactMiddle = false;
+    }
+  }
+  if (ElapsedTimeRing >= ClockwiseTimeRing) {
+    if (CounterRing == 0) {
+      ServoRing.write(90);
+      CounterRing += 1;
+      ContactRing = false;
+    }
+  }
+  if (ElapsedTimePinky >= ClockwiseTimePinky) {
+    if (CounterPinky == 0) {
+      ServoPinky.write(90);
+      CounterPinky += 1;
+      ContactPinky = false;
+    }
+  }
+  if (ElapsedTimeThumb >= ClockwiseTimeThumb) {
+    if (CounterThumb == 0) {
+      ServoThumbSmall.write(90);
+      ServoThumbLarge.write(90);
+      CounterThumb += 1;
+      ContactThumb = false;
+    }
+  }
+delay(100); 
+}
+
+CounterIndex = 0; //We reset our counters, so that we dont skip our logic when we tense again.
+CounterMiddle = 0;
+CounterRing = 0;
+CounterPinky = 0;
+CounterThumb = 0;
+IsTensed = false; //This now exists this gripping loop until we sense another tensed value
+}
+
+
+void setup() {
+  
+  Serial.begin(9600); //Needed for serial monitor
+
+  ServoIndex.attach(2);  // Attach Index servo to pin 2
+  ServoMiddle.attach(4);  // Attach Middle servo to pin 4
+  ServoRing.attach(7);  // Attach servo 3 to pin 4
+  ServoPinky.attach(8);  // Attach servo 4 to pin 5
+  ServoThumbLarge.attach(13);  // Attach servo 5 to pin 6
+  ServoThumbSmall.attach(12);  // Attach servo 6 to pin 7
+
+  pinMode(SensorPinIndex, INPUT);
+  pinMode(SensorPinMiddle, INPUT);
+  pinMode(SensorPinRing, INPUT);
+  pinMode(SensorPinPinky, INPUT);
+  pinMode(SensorPinThumb, INPUT);
+  
+
+}
+
+void loop() {
+
+if (IsTensed) {
+  Full_Grip();
+} else {
+  int EMGSensorValue = analogRead(A5);
+  int OutPutEMG = map(EMGSensorValue, 0, 1023, 0, 255);
+  if (OutPutEMG >= ThresholdEMG) {
+    IsTensed = true;
+    Serial.println("Tensed");
+  } else {
+    ServoIndex.write(90); // When not tensed the motors should be stationary
+    ServoMiddle.write(90);
+    ServoRing.write(90);
+    ServoPinky.write(90);
+    ServoThumbLarge.write(90);
+    ServoThumbSmall.write(90);
+  }
+}
+
+}
